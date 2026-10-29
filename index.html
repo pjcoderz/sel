@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 模擬學生對話練習：行前導覽</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;800&display=swap">
+<style>
+:root{
+  --bg:#f2f5f6;--panel:#ffffff;--ink:#16303a;--mute:#5a6f77;--line:#d3dde0;
+  --teal:#1d6b74;--teal-ink:#ffffff;--hl:#f6d55c;--hl-ink:#3b2f00;
+  --ok:#1f7a4d;--okbg:#e3f3ea;--bad:#b3392b;--badbg:#fbe9e6;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1b20;--panel:#172830;--ink:#e6eef0;--mute:#9db2b9;--line:#2c434c;
+    --teal:#5cc0cb;--teal-ink:#0b1c20;--hl:#e0bd3a;--hl-ink:#201900;
+    --ok:#6fd3a0;--okbg:#173626;--bad:#ff9b8c;--badbg:#3a1f1b;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1b20;--panel:#172830;--ink:#e6eef0;--mute:#9db2b9;--line:#2c434c;
+  --teal:#5cc0cb;--teal-ink:#0b1c20;--hl:#e0bd3a;--hl-ink:#201900;
+  --ok:#6fd3a0;--okbg:#173626;--bad:#ff9b8c;--badbg:#3a1f1b;color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;line-height:1.8;font-size:16px}
+h1,h2,h3{font-family:"Noto Serif TC","Songti TC",serif;line-height:1.4;margin:0 0 .6em}
+h1{font-size:clamp(1.7rem,5vw,2.4rem);font-weight:800}
+h2{font-size:1.5rem;font-weight:800}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0 0 1em;max-width:38em}
+.wrap{max-width:60rem;margin:0 auto;padding:1rem}
+.top{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.5rem 0 1rem}
+.top b{font-family:"Noto Serif TC",serif}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.theme{background:none;border:1px solid var(--line);border-radius:6px;padding:.25rem .7rem;font-size:.9rem}
+.layout{display:grid;grid-template-columns:12rem 1fr;gap:2rem;align-items:start}
+.rail{list-style:none;margin:0;padding:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 1rem)}
+.rail button{display:flex;gap:.6rem;align-items:center;width:100%;text-align:left;background:none;border:0;border-left:3px solid var(--line);padding:.55rem .8rem;color:var(--mute)}
+.rail button[disabled]{opacity:.5;cursor:not-allowed}
+.rail .done{border-left-color:var(--ok)}
+.rail .cur{border-left-color:var(--teal);color:var(--ink);font-weight:700;background:var(--panel)}
+.rail .tick{width:1.2em;display:inline-block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1.6rem}
+.hl{background:linear-gradient(transparent 55%,var(--hl) 55%);color:inherit}
+.lead{font-size:1.1rem;color:var(--mute)}
+.btn{background:var(--teal);color:var(--teal-ink);border:0;border-radius:8px;padding:.7rem 1.3rem;font-weight:700;display:inline-block;text-decoration:none}
+.btn[disabled],.btn.off{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.4rem;align-items:center}
+.note{font-size:.92rem;color:var(--mute)}
+.opt{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.7rem 1rem;margin:0 0 .6rem}
+.opt:hover{border-color:var(--teal)}
+.opt[aria-pressed="true"],.opt.sel{border-color:var(--teal);box-shadow:inset 3px 0 0 var(--teal)}
+.bubble{border-radius:10px;padding:.8rem 1rem;margin:.5rem 0;max-width:34em}
+.bubble small{display:block;color:var(--mute);margin-bottom:.2rem}
+.ai{background:var(--badbg)}
+.real{background:var(--okbg)}
+.lesson{border-left:4px solid var(--hl);padding:.4rem 1rem;margin-top:1rem}
+details{border:1px solid var(--line);border-radius:8px;padding:.6rem 1rem;margin:0 0 .6rem}
+summary{cursor:pointer;font-weight:700}
+.steps{list-style:none;counter-reset:s;padding:0;margin:0}
+.steps li{counter-increment:s;padding:.8rem 0 .8rem 3rem;position:relative;border-bottom:1px solid var(--line)}
+.steps li::before{content:counter(s);position:absolute;left:0;top:.8rem;width:2rem;height:2rem;border-radius:50%;background:var(--teal);color:var(--teal-ink);text-align:center;line-height:2rem;font-weight:700}
+.steps b{display:block}
+.chk{display:flex;gap:.8rem;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid var(--line);cursor:pointer}
+.chk input{width:1.3rem;height:1.3rem;margin-top:.35rem;accent-color:var(--teal);flex:none}
+.q{margin:0 0 1.4rem}
+.fb{margin-top:.4rem;font-size:.95rem}
+.fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}
+input[type=text]{font:inherit;width:100%;max-width:22rem;padding:.6rem .8rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+textarea{font:inherit;width:100%;min-height:8rem;padding:.8rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+code{background:var(--bg);padding:.1rem .4rem;border-radius:4px}
+.sec{display:none}.sec.show{display:block}
+@media (max-width:720px){
+  .layout{grid-template-columns:1fr;gap:1rem}
+  .rail{position:static;display:flex;overflow-x:auto;gap:.3rem}
+  .rail li{flex:none}
+  .rail button{border-left:0;border-bottom:3px solid var(--line);white-space:nowrap;padding:.5rem .7rem}
+  .rail .done{border-bottom-color:var(--ok)}.rail .cur{border-bottom-color:var(--teal)}
+  .card{padding:1.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><b id="course"></b><button class="theme" id="theme" type="button">切換深淺色</button></div>
+  <div class="layout">
+    <ul class="rail" id="rail" aria-label="進度"></ul>
+    <main>
+
+      <section class="sec card" id="s0">
+        <h1>和 AI 模擬學生對話之前，先看這一頁</h1>
+        <p class="lead">大約 15 分鐘。你會了解練習怎麼進行、AI 學生和真實學生哪裡不同，並確認使用須知。</p>
+        <p>這次練習的目標：<span class="hl" id="goal"></span></p>
+        <p>完成這份導覽後，你才會看到進入練習的按鈕。</p>
+        <div class="row"><button class="btn" data-next>開始</button></div>
+      </section>
+
+      <section class="sec card" id="s1">
+        <h2>AI 學生不是真實學生</h2>
+        <p>AI 是依照老師寫好的設定「演」一個學生。它演得像，但不等於真實學生會有的反應。先實際試一下。</p>
+        <h3>情境：段考後，小宇一直低著頭。你會怎麼開口？</h3>
+        <div id="demoOpts"></div>
+        <div id="demoOut" aria-live="polite"></div>
+        <div class="lesson" id="demoLesson" hidden><b>你可能已經發現：</b>AI 往往比真實學生更快敞開心房、更快接受安慰、更快道歉。所以在 AI 面前順利，不代表真實教學也會順利。從 SEL 的角度看，真實學生的沉默或敷衍，常是他在保護自己，不是不願意溝通。</div>
+        <h3 style="margin-top:1.6rem">常見的 AI 失真</h3>
+        <details><summary>太配合</summary>只要你的話語稍微有禮貌，它就願意配合，很少真的沉默或頂嘴。</details>
+        <details><summary>太快頓悟</summary>一兩句建議就說「我懂了」，真實的改變通常慢很多。</details>
+        <details><summary>說話太成熟</summary>句子完整、表達清楚，比同齡學生更會描述自己的感受。</details>
+        <details><summary>每次都不一樣</summary>同樣一句話，AI 可能給出不同的回應。所以一次對話的結果，不能代表「這樣說就一定有效」。</details>
+        <details><summary>聊久了跑出角色</summary>對話變長後，它可能忘記設定，開始給你教學建議。</details>
+        <div class="row"><button class="btn" id="n1" data-next disabled>下一步</button><span class="note" id="n1note">請先在上面點選至少兩種開場，比較差異。</span></div>
+      </section>
+
+      <section class="sec card" id="sSEL">
+        <h2>用 SEL 的眼光看這場對話</h2>
+        <p>社會情緒學習（SEL）常用五項能力來描述。這五項既是你想培養學生的，也是你在對話中要展現的。請逐項展開，看它在對話裡長什麼樣子。</p>
+        <p>本次練習的重點：<span class="hl" id="selFocus"></span></p>
+        <details><summary>自我覺察</summary><p>辨識並說出自己與他人的情緒、想法。</p><p class="note">對話中可以觀察：我有沒有試著為學生的感受命名（例如「聽起來你有點挫折」）？我被頂嘴或冷處理時，能不能先察覺自己的情緒？</p></details>
+        <details><summary>自我管理</summary><p>調節情緒與衝動，面對壓力時仍能穩定地行動。</p><p class="note">對話中可以觀察：學生沉默時，我是給時間，還是連環追問、急著說教？被挑釁時，我有沒有拉高音量或反擊？</p></details>
+        <details><summary>社會覺察</summary><p>理解他人的觀點與處境，包含背景與脈絡。</p><p class="note">對話中可以觀察：我是先理解學生的角度，還是先評斷對錯？我有沒有留意學生說話以外的線索？</p></details>
+        <details><summary>人際技巧</summary><p>清楚溝通、用心傾聽、建立並維持關係、化解衝突。</p><p class="note">對話中可以觀察：開放式提問的比例、有沒有重述學生的話確認理解、有沒有一起找出可行的下一步。</p></details>
+        <details><summary>負責任的決定</summary><p>考慮後果、安全與倫理，做出對自己與他人都合適的選擇。</p><p class="note">對話中可以觀察：我有沒有讓學生參與決定、提供選擇？遇到需要協助的狀況，我知道要找輔導室等資源，而不是獨自承諾保密或扛下來嗎？</p></details>
+        <div class="lesson"><b>兩個視角要分清楚：</b>機器人會演出學生的情緒與反應，你要練習「讀懂」。同時，你自己在對話中的情緒反應，才是真正要練習覺察與管理的部分。另外提醒，AI 的情緒是演出來的，不是真的情緒。</div>
+        <div class="row"><button class="btn" id="n2" data-next disabled>下一步</button><span class="note" id="n2note"></span></div>
+      </section>
+
+      <section class="sec card" id="sETH">
+        <h2>AI 倫理：這次練習要守的原則</h2>
+        <p>UNESCO《教師 AI 能力架構》（2024）指出，教師不只要會用 AI，還要能判斷何時該用、怎麼用才安全。這份架構甚至把「用生成式 AI 模擬學生遇到困難的情境，讓教師練習並獲得回饋」列為專業發展的例子，前提是人要保持掌控，並做好倫理檢視。</p>
+        <p>下面六項是架構在入門層級列出的倫理原則。請逐項展開，看它在這次練習中代表什麼。</p>
+        <details><summary>1. 不造成傷害</summary><p>AI 的設計與使用，要先理解它可能對人的權利、尊嚴、安全與福祉造成的影響。</p><p class="note">在這次練習中：不要把模擬學生當成可以隨意戲弄或傷害的對象，現在養成的說話方式會帶進真實教室。機器人若產生讓你不舒服或不適當的內容，請立刻停止並告訴老師。</p></details>
+        <details><summary>2. 相稱性</summary><p>使用 AI 要有正當目的，且不超過達成目的所需。</p><p class="note">在這次練習中：AI 對話是真實教學前的暖身，不能取代實習觀察、真實的師生互動與同儕討論。先想清楚「這次我要練什麼」，再使用。</p></details>
+        <details><summary>3. 不歧視與包容</summary><p>AI 可能帶有演算法偏誤，教師要留意它是否排除或標籤化特定的學生。</p><p class="note">在這次練習中：留意模擬學生是否用刻板方式描寫某些性別、族群、家庭背景或行為問題的學生。看到偏誤就記錄並回報老師，不要當成「真實學生就是這樣」。</p></details>
+        <details><summary>4. 永續</summary><p>AI 的運作有環境成本，使用時也要把這點納入考量。</p><p class="note">在這次練習中：有目的地練習，不用大量重複、沒有目標的對話去刷出漂亮的結果。</p></details>
+        <details><summary>5. 人的決定與責任</summary><p>重要的判斷與責任必須由人承擔，AI 不能取代教師對教學決定的責任。AI 無法真正理解現實世界，也不能做價值判斷，還可能出錯或編造內容。</p><p class="note">在這次練習中：機器人的反應和 AI 給的回饋都只是參考。你要用課堂所學與自己的專業判斷檢核，最後對自己的教學決定負責。</p></details>
+        <details><summary>6. 透明與可解釋</summary><p>使用者有權知道自己在和 AI 互動，也有權質疑 AI 為什麼這樣回應。</p><p class="note">在這次練習中：你清楚知道對方是 AI，情境是老師設計的。對 AI 的回饋可以追問依據。繳交作業時，誠實標示哪些內容使用了 AI。</p></details>
+        <div class="lesson"><b>三個要養成的習慣（安全與負責任使用）</b><br>① 不輸入可辨識的真實學生或自己的詳細個人資料。<br>② 尊重著作權，引用或使用 AI 產出的內容時要標示。<br>③ 發現偏誤、錯誤或不當輸出時，記錄並回報，不自己默默處理。</div>
+        <div class="row"><button class="btn" id="nE" data-next disabled>下一步</button><span class="note" id="nEnote"></span></div>
+        <p class="note" style="margin-top:1.2rem">來源：本頁倫理內容改寫自 UNESCO (2024)，<i>AI competency framework for teachers</i>，授權 CC BY-SA 3.0 IGO。內容已翻譯並依本課程情境改寫，非 UNESCO 官方版本，也未經 UNESCO 背書。各項「在這次練習中」的說明為本課程的詮釋。</p>
+      </section>
+
+      <section class="sec card" id="s2">
+        <h2>練習流程</h2>
+        <ol class="steps">
+          <li><b>開啟老師提供的連結</b>用指定的 Google 帳號登入，接續老師分享的這段對話，開始和模擬學生練習。</li>
+          <li><b>每次都從老師的連結重新開始</b>每次練習都回到老師提供的連結進入，不要接著上一次自己的對話繼續。這樣角色才會從老師設定的狀態出發。</li>
+          <li><b>用心對話，當成真的學生</b>依照本次練習目標與 SEL 觀察重點進行。你先開口，機器人會用學生的身分回應。對話中也留意自己的情緒。<span class="hl">每次練習，你自己至少要發言 5 次以上</span>（不含「停止模擬」等指令），才有足夠的內容可以練習和分析。真實的學生要慢慢才敢說出心裡話，通常需要多次來回。前幾輪對方沉默或敷衍是正常的，不是你失敗了。</li>
+          <li><b>需要時結束模擬</b>輸入 <code class="pause"></code> 就可以結束模擬。若只是機器人開始給你教學建議，請它「回到學生角色」即可，不用結束。如果只是覺得卡住或有點尷尬，先換個問法再多試幾輪；真的不舒服時，隨時可以結束。</li>
+          <li><b>保存並繳交逐字稿</b><span id="submit"></span></li>
+          <li><b>寫簡短反思</b>哪一句話改變了對話走向？我用到哪一項 SEL 能力？我自己的情緒在哪個時刻最有波動？哪裡不像真實學生？下次想怎麼調整？</li>
+        </ol>
+        <div class="row"><button class="btn" data-next>下一步</button></div>
+      </section>
+
+      <section class="sec card" id="s3">
+        <h2>使用須知</h2>
+        <p>請逐項閱讀並勾選。全部勾選後才能繼續。</p>
+        <label class="chk"><input type="checkbox"><span>我只使用老師提供的情境。<b>不輸入</b>真實學生或實習班級的姓名、座號、照片或可辨識的細節。</span></label>
+        <label class="chk"><input type="checkbox"><span>我會把機器人當成真實學生對待。我現在的說話方式，會變成未來在教室裡的習慣。</span></label>
+        <label class="chk"><input type="checkbox"><span>我知道 AI 的反應只是模擬，<b>不能</b>代表真實學生的想法。</span></label>
+        <label class="chk"><input type="checkbox"><span>我每次練習都會從<b>老師的連結重新開始</b>，不接著舊對話，也不修改老師的設定。</span></label>
+        <label class="chk"><input type="checkbox"><span>如果機器人出現讓我不舒服或不適當的內容，我會停止並告訴老師。</span></label>
+        <label class="chk"><input type="checkbox"><span>我會依老師規定保存完整逐字稿，並遵守課程對 AI 使用與引用的規範。</span></label>
+        <label class="chk"><input type="checkbox"><span>我會留意自己在對話中的情緒反應。覺得不舒服或太激動時，我可以隨時輸入「停止模擬」結束，休息一下再決定要不要繼續。</span></label>
+        <label class="chk"><input type="checkbox"><span>我會對 AI 的回應與回饋保持質疑，把它當成參考。專業判斷與責任在我。</span></label>
+        <label class="chk"><input type="checkbox"><span>我會在作業中誠實標示哪些內容使用了 AI，並在發現偏誤或不當內容時回報老師。</span></label>
+        <label class="chk"><input type="checkbox"><span>我每次練習都會自己至少發言 <b>5 次以上</b>（不含「停止模擬」等指令）。若中途因為不舒服而提前結束，我會告訴老師。</span></label>
+        <label class="chk"><input type="checkbox"><span>我知道學生需要多次來回才會敢說出心裡話。前幾輪對方沉默或敷衍很正常，感到卡住時，我會先調整提問方式、多試幾輪，而不是太早結束。真的不舒服時，我仍然可以隨時結束。</span></label>
+        <div class="row"><button class="btn" id="n3" data-next disabled>下一步</button><span class="note" id="n3note"></span></div>
+      </section>
+
+      <section class="sec card" id="s4">
+        <h2>小測驗</h2>
+        <p>七題都答對才能繼續。答錯可以直接改選。</p>
+        <div id="quiz"></div>
+        <div class="row"><button class="btn" id="n4" data-next disabled>下一步</button><span class="note" id="n4note"></span></div>
+      </section>
+
+      <section class="sec card" id="s5">
+        <h2>準備好了</h2>
+        <p>你已完成行前導覽。填寫姓名後，複製完成確認傳給老師，再進入練習。</p>
+        <p><label for="nm">姓名（或學號）</label><br><input type="text" id="nm" autocomplete="off"></p>
+        <textarea id="proof" readonly aria-label="完成確認文字"></textarea>
+        <div class="row">
+          <button class="btn ghost" id="copy" type="button">複製完成確認</button>
+          <a class="btn off" id="go" target="_blank" rel="noopener" aria-disabled="true">進入練習</a>
+        </div>
+        <p class="note" id="gonote"></p>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+/* ===== 老師設定區：修改這裡就好 ===== */
+const CONFIG={
+  course:"班級經營：師生對話模擬練習",
+  goal:"練習先接住學生的情緒，再用開放式提問了解原因，避免說教。",
+  gemUrl:"https://share.gemini.google/p5Tj5j5HRXiD",   // 老師分享的對話連結
+  selFocus:"自我覺察、社會覺察、人際技巧",
+  pauseCode:"「停止模擬」",
+  submit:"練習結束後，把完整對話複製貼到指定的文件，或分享你自己那段對話的連結，在期限內繳交給老師。"
+};
+/* ================================== */
+
+const TITLES=["開始","認識 AI 學生","SEL 觀察重點","AI 倫理","練習流程","使用須知","小測驗","完成"];
+const DEMO=[
+ {t:"考不好沒關係，下次加油就好。",ai:"謝謝老師，我知道了，我會更努力的！",re:"「喔。」（繼續低頭收書包）"},
+ {t:"我看你今天比較安靜，發生什麼事了嗎？",ai:"老師，其實我考不好很難過，我很怕讓爸媽失望……",re:"「沒事啊。」（但他沒有走開）"},
+ {t:"你一定是沒有認真念書吧。",ai:"對不起老師，我會好好反省。",re:"可能反駁「才不是」，或整個人完全封閉、不再看你。"}
+];
+const QUIZ=[
+ {q:"機器人很快回答「我懂了，謝謝老師」。最合理的判斷是？",o:["我的技巧很成功，學生被說服了","AI 傾向配合，我需要用更真實的標準檢視這次對話","學生本來就很容易被說服"],a:1,e:"AI 常常太快頓悟，順利不等於有效。"},
+ {q:"練習中，機器人突然開始給你教學建議。你該怎麼做？",o:["照它的建議去做","請它回到學生角色","直接關掉，不再理它"],a:1,e:"說「請回到學生角色」即可拉回；必要時用暫停暗號。"},
+ {q:"哪一項內容可以輸入對話？",o:["我上週實習班上小明的狀況","老師提供的情境設定","實習學校的班級名單"],a:1,e:"只使用老師提供的情境，不輸入任何真實學生資料。"},
+ {q:"第二次練習時，應該怎麼開始？",o:["接續上一次自己的對話","再從老師的連結重新進入","複製同學的對話繼續"],a:1,e:"每次都從老師的連結重新開始，角色才會回到老師設定的起點。"},
+ {q:"模擬學生回答「沒事啊」，但沒有離開。從 SEL 的角度，哪個回應最合適？",o:["「那我就當你沒事了。」","「好，我在這裡，你想說的時候再說。」","「我知道你一定有事，快說！」"],a:1,e:"這句話接住了學生的防衛（社會覺察），也保持穩定不急躁（自我管理），並保留了關係的門（人際技巧）。"},
+ {q:"練習後，AI 觀察者回饋你「表現很好」。依「人的決定與責任」原則，你該怎麼做？",o:["直接採用，因為 AI 比較客觀","當作參考，用課堂所學與專業判斷檢核，必要時追問它的依據","完全不看 AI 的任何回饋"],a:1,e:"AI 無法真正理解現實世界，也不能做價值判斷，判斷與責任仍在教師。"},
+ {q:"你發現模擬學生對某一類學生（例如行為問題學生）的描寫很刻板。最適合的做法是？",o:["記下來，當作真實學生的樣子","當成 AI 可能的偏誤，記錄並回報老師","刻意加強那個形象，讓練習更逼真"],a:1,e:"教師要留意演算法偏誤，避免它強化對特定學生的標籤與排除。"}
+];
+const $=s=>document.querySelector(s);
+let cur=0,maxU=0,tried=new Set();
+const ok={1:false,3:false,4:false};
+
+/* 儲存進度（可失敗） */
+try{const v=JSON.parse(localStorage.getItem("gp")||"null");if(v){maxU=v.maxU||0}}catch(e){}
+function save(){try{localStorage.setItem("gp",JSON.stringify({maxU}))}catch(e){}}
+
+$("#course").textContent=CONFIG.course;
+$("#goal").textContent=CONFIG.goal;
+$("#selFocus").textContent=CONFIG.selFocus;
+document.querySelectorAll(".pause").forEach(e=>e.textContent=CONFIG.pauseCode);
+$("#submit").textContent=CONFIG.submit;
+
+/* 導覽列 */
+function drawRail(){
+  const r=$("#rail");r.innerHTML="";
+  TITLES.forEach((t,i)=>{
+    const li=document.createElement("li"),b=document.createElement("button");
+    b.type="button";b.disabled=i>maxU;
+    b.className=(i===cur?"cur ":"")+(i<maxU||(i<cur)?"done":"");
+    b.innerHTML='<span class="tick">'+(i<maxU?"✓":"")+"</span>"+t;
+    if(i===cur)b.setAttribute("aria-current","step");
+    b.onclick=()=>go(i);li.appendChild(b);r.appendChild(li);
+  });
+}
+function go(i){
+  cur=i;document.querySelectorAll(".sec").forEach((s,k)=>s.classList.toggle("show",k===i));
+  drawRail();window.scrollTo({top:0});
+  if(i===7)finish();
+}
+function unlock(i){if(i>maxU){maxU=i;save()}}
+document.querySelectorAll("[data-next]").forEach(b=>b.onclick=()=>{unlock(cur+1);go(cur+1)});
+
+/* 第 1 步：情境體驗 */
+const dOpts=$("#demoOpts");
+DEMO.forEach((d,i)=>{
+  const b=document.createElement("button");b.type="button";b.className="opt";b.textContent="你說：「"+d.t+"」";
+  b.onclick=()=>{
+    tried.add(i);dOpts.querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");
+    $("#demoOut").innerHTML='<div class="bubble ai"><small>AI 學生常見回應</small>'+d.ai+'</div><div class="bubble real"><small>真實學生較可能的反應</small>'+d.re+"</div>";
+    $("#demoLesson").hidden=false;
+    if(tried.size>=2){$("#n1").disabled=false;$("#n1note").textContent="";}
+    else $("#n1note").textContent="再試一種開場，看看有什麼不同。";
+  };
+  dOpts.appendChild(b);
+});
+
+/* SEL：逐項展開 */
+const selD=[...document.querySelectorAll("#sSEL details")],opened=new Set();
+$("#n2note").textContent="請逐項展開五項能力閱讀";
+selD.forEach((d,i)=>d.addEventListener("toggle",()=>{
+  if(d.open)opened.add(i);
+  const left=selD.length-opened.size;
+  $("#n2").disabled=left>0;
+  $("#n2note").textContent=left>0?"還有 "+left+" 項尚未展開":"";
+}));
+
+/* AI 倫理：逐項展開 */
+const ethD=[...document.querySelectorAll("#sETH details")],ethOpen=new Set();
+$("#nEnote").textContent="請逐項展開六項原則閱讀";
+ethD.forEach((d,i)=>d.addEventListener("toggle",()=>{
+  if(d.open)ethOpen.add(i);
+  const left=ethD.length-ethOpen.size;
+  $("#nE").disabled=left>0;
+  $("#nEnote").textContent=left>0?"還有 "+left+" 項尚未展開":"";
+}));
+
+/* 第 3 步：勾選 */
+const boxes=[...document.querySelectorAll("#s3 input")];
+function chkBoxes(){
+  const n=boxes.filter(b=>b.checked).length;
+  $("#n3").disabled=n<boxes.length;
+  $("#n3note").textContent=n<boxes.length?"還有 "+(boxes.length-n)+" 項未勾選":"";
+}
+boxes.forEach(b=>b.onchange=chkBoxes);chkBoxes();
+
+/* 第 4 步：測驗 */
+const ans={};
+const qz=$("#quiz");
+QUIZ.forEach((x,qi)=>{
+  const d=document.createElement("div");d.className="q";
+  d.innerHTML="<h3>"+(qi+1)+". "+x.q+'</h3><div></div><div class="fb" aria-live="polite"></div>';
+  const box=d.children[1],fb=d.children[2];
+  x.o.forEach((t,oi)=>{
+    const b=document.createElement("button");b.type="button";b.className="opt";b.textContent=t;
+    b.onclick=()=>{
+      box.querySelectorAll(".opt").forEach(e=>e.classList.remove("sel"));b.classList.add("sel");
+      ans[qi]=oi===x.a;
+      fb.className="fb "+(ans[qi]?"ok":"bad");
+      fb.textContent=ans[qi]?"答對了。"+x.e:"再想想看，換一個選項。";
+      const good=QUIZ.every((_,k)=>ans[k]===true);
+      $("#n4").disabled=!good;
+      $("#n4note").textContent=good?"":"答對 "+Object.values(ans).filter(Boolean).length+" / "+QUIZ.length+" 題";
+    };
+    box.appendChild(b);
+  });
+  qz.appendChild(d);
+});
+$("#n4note").textContent="尚未作答";
+
+/* 第 5 步：完成確認 */
+function proofText(){
+  const n=$("#nm").value.trim()||"（請先填姓名）";
+  const d=new Date().toLocaleString("zh-TW");
+  return "【行前導覽完成確認】\n課程："+CONFIG.course+"\n姓名："+n+"\n完成時間："+d+"\n已閱讀並同意使用須知，並通過小測驗。"+(CONFIG.gemUrl?"\n練習連結："+CONFIG.gemUrl:"");
+}
+function finish(){
+  $("#proof").value=proofText();
+  const g=$("#go");
+  if(CONFIG.gemUrl){g.href=CONFIG.gemUrl;g.classList.remove("off");g.setAttribute("aria-disabled","false");$("#gonote").textContent="記得：每次練習都從這個連結重新進入。";}
+  else{g.removeAttribute("href");g.classList.add("off");$("#gonote").textContent="老師尚未設定練習連結，請向老師索取。";}
+}
+$("#nm").oninput=()=>{$("#proof").value=proofText()};
+$("#copy").onclick=async()=>{
+  const t=$("#proof");
+  try{await navigator.clipboard.writeText(t.value);$("#copy").textContent="已複製";}
+  catch(e){t.focus();t.select();$("#copy").textContent="請按 Ctrl/⌘ + C 複製";}
+};
+
+/* 主題 */
+$("#theme").onclick=()=>{
+  const r=document.documentElement,dark=getComputedStyle(r).colorScheme==="dark";
+  r.setAttribute("data-theme",dark?"light":"dark");
+};
+
+go(0);
+</script>
+</body>
+</html>
